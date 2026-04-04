@@ -45,8 +45,8 @@ export async function GET(request: NextRequest) {
         login: s.author?.login ?? 'unknown',
         avatar_url: s.author?.avatar_url ?? '',
         totalCommits: s.total,
-        additions: s.weeks.reduce((sum, w) => sum + w.a, 0),
-        deletions: s.weeks.reduce((sum, w) => sum + w.d, 0),
+        additions: s.weeks.reduce((sum, w) => sum + (w.a ?? 0), 0),
+        deletions: s.weeks.reduce((sum, w) => sum + (w.d ?? 0), 0),
         pullRequests: prCounts[s.author?.login ?? ''] ?? 0,
       }))
     })
