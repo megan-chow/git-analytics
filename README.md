@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Git Analytics
+
+A web application for visualizing per-contributor statistics across GitHub repositories. Supports public repositories without login, and private repositories via GitHub OAuth.
+
+## Features
+
+- Per-contributor breakdown of commits
+- Activity timeline showing commits and PR events grouped by date
+- Expandable commit view with file-level diffs
+- Public repo access with no login required
+- Private repo access via GitHub OAuth
 
 ## Getting Started
 
-First, run the development server:
-
+### Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env.local` file in the root of the project:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+GITHUB_TOKEN=ghp_your_personal_access_token
+ENCRYPTION_KEY=your-32-byte-hex-key
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Generate an encryption key with:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
-## Learn More
+### Supabase Setup
 
-To learn more about Next.js, take a look at the following resources:
+Run the following in your Supabase SQL Editor:
+```sql
+create table profiles (
+  id uuid references auth.users(id) primary key,
+  github_token text
+);
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+alter table profiles enable row level security;
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+create policy "Users can read own profile"
+  on profiles for select using (auth.uid() = id);
 
-## Deploy on Vercel
+create policy "Users can update own profile"
+  on profiles for update using (auth.uid() = id);
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+create policy "Users can insert own profile"
+  on profiles for insert with check (auth.uid() = id);
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+
+### GitHub OAuth Setup
+
+1. Go to [github.com/settings/developers](https://github.com/settings/developers) and create a new OAuth App
+2. Set the callback URL to `https://your-project.supabase.co/auth/v1/callback`
+3. Enable the `repo` scope for private repository access
+4. Paste the Client ID and Secret into Supabase under **Authentication → Providers → GitHub**
+
+### Running Locally
+```bash
+npm run dev
+```
+
+## Security
+
+- GitHub OAuth tokens are encrypted at rest using AES-256 before being stored in the database
+- Postgres row-level security ensures users can only access their own credentials
+
+## Planned Features
+
+- Pull request analytics
+- Response caching to reduce GitHub API usage and improve load times
+- Date range filtering to scope analytics to a specific time period
+- GitLab and Bitbucket support
