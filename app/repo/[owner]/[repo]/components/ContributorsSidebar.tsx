@@ -21,8 +21,9 @@ export default function ContributorsSidebar({
 }: Props) {
   return (
     <div style={{
-      width: collapsed ? '48px' : '220px',
+      width: collapsed ? '64px' : '220px',
       minWidth: collapsed ? '64px' : '220px',
+      height: '100vh',
       borderRight: '1px solid #21262d',
       background: '#0d1117',
       transition: 'width 0.2s',
@@ -63,7 +64,7 @@ export default function ContributorsSidebar({
         </button>
       </div>
 
-      <div style={{ overflowY: 'auto', flex: 1 }}>
+      <div style={{ overflowY: 'scroll', flex: 1 }}>
         {contributors.map((c) => (
           <button
             key={c.login}
