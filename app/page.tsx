@@ -123,7 +123,7 @@ export default function Home() {
           >
             Login with GitHub
           </button>
-          <button
+          {/* <button
             disabled
             style={{
               padding: '8px 20px',
@@ -152,7 +152,7 @@ export default function Home() {
             }}
           >
             Login with Bitbucket (coming soon)
-          </button>
+          </button> */}
         </div>
       )}
     </main>
