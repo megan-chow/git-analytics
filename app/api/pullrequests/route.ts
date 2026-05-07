@@ -10,17 +10,20 @@ export async function GET(request: NextRequest) {
   if (!owner || !repo || !author) {
     return NextResponse.json({ error: 'Missing owner, repo, or author' }, { status: 400 })
   }
-
   const octokit = await getOctokit()
 
   try {
-    const { data: prs } = await octokit.rest.pulls.list({
+    const { data: allPRs } = await octokit.rest.pulls.list({
       owner, repo, state: 'all', per_page: 100,
     })
 
-    const authorPRs = prs.filter(pr => pr.user?.login === author)
+    const authorPRs = allPRs.filter(pr => pr.user?.login === author)
 
-    return NextResponse.json(authorPRs.map(pr => ({
+    const detailed = await Promise.all(
+      authorPRs.map(pr => octokit.rest.pulls.get({ owner, repo, pull_number: pr.number }))
+    )
+
+    return NextResponse.json(detailed.map(({ data: pr }) => ({
       number: pr.number,
       title: pr.title,
       state: pr.state,
@@ -31,11 +34,11 @@ export async function GET(request: NextRequest) {
       updatedAt: pr.updated_at,
       mergedAt: pr.merged_at ?? null,
       closedAt: pr.closed_at ?? null,
-      additions: pr.additions ?? 0,
-      deletions: pr.deletions ?? 0,
-      changedFiles: pr.changed_files ?? 0,
-      comments: pr.comments ?? 0,
-      reviewComments: pr.review_comments ?? 0,
+      additions: pr.additions,
+      deletions: pr.deletions,
+      changedFiles: pr.changed_files,
+      comments: pr.comments,
+      reviewComments: pr.review_comments,
       url: pr.html_url,
       baseBranch: pr.base.ref,
       headBranch: pr.head.ref,
