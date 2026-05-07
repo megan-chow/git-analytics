@@ -16,7 +16,7 @@ export default function AnalyticsContent({ tab, owner, repo, selected }: Props) 
     <div style={{ padding: '24px' }}>
       {tab === 'Timeline'      && selected && <Timeline owner={owner} repo={repo} author={selected.login} />}
       {tab === 'Commits'       && selected && <Commits owner={owner} repo={repo} author={selected.login}/>}
-      {tab === 'Pull requests' && selected && <PullRequests />}
+      {tab === 'Pull requests' && selected && <PullRequests owner={owner} repo={repo} author={selected.login} />}
     </div>
   )
 }
