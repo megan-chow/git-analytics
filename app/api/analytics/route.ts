@@ -21,33 +21,28 @@ export async function GET(request: NextRequest) {
 
   try {
     const { data } = await getCachedOrFetch(supabase, repoKey, CACHE_TTL_MINUTES, async () => {
-      let stats
-      for (let attempt = 0; attempt < 10; attempt++) {
-        console.log('attempt', attempt)
-        const { data } = await octokit.rest.repos.getContributorsStats({ owner, repo })
-        if (Array.isArray(data)) { stats = data; break }
-        await new Promise(res => setTimeout(res, 3000))
+      const [commits, { data: pullRequests }] = await Promise.all([
+        octokit.paginate(octokit.rest.repos.listCommits, { owner, repo, per_page: 100 }),
+        octokit.rest.pulls.list({ owner, repo, state: 'all', per_page: 100 }),
+      ])
+
+      const commitCounts: Record<string, { login: string; avatar_url: string; totalCommits: number }> = {}
+      for (const commit of commits) {
+        const login = commit.author?.login ?? 'unknown'
+        const avatar_url = commit.author?.avatar_url ?? ''
+        if (!commitCounts[login]) commitCounts[login] = { login, avatar_url, totalCommits: 0 }
+        commitCounts[login].totalCommits++
       }
 
-      if (!stats) throw new Error('GitHub is taking too long to compute stats, please try again in a moment')
-
-      const { data: pullRequests } = await octokit.rest.pulls.list({
-        owner, repo, state: 'all', per_page: 100
-      })
-
-      const prCounts = pullRequests.reduce((acc, pr) => {
+      const prCounts: Record<string, number> = {}
+      for (const pr of pullRequests) {
         const login = pr.user?.login
-        if (login) acc[login] = (acc[login] ?? 0) + 1
-        return acc
-      }, {} as Record<string, number>)
+        if (login) prCounts[login] = (prCounts[login] ?? 0) + 1
+      }
 
-      return stats.map((s) => ({
-        login: s.author?.login ?? 'unknown',
-        avatar_url: s.author?.avatar_url ?? '',
-        totalCommits: s.total,
-        additions: s.weeks.reduce((sum, w) => sum + (w.a ?? 0), 0),
-        deletions: s.weeks.reduce((sum, w) => sum + (w.d ?? 0), 0),
-        pullRequests: prCounts[s.author?.login ?? ''] ?? 0,
+      return Object.values(commitCounts).map((c) => ({
+        ...c,
+        pullRequests: prCounts[c.login] ?? 0,
       }))
     })
 
